@@ -64,11 +64,6 @@ var swiper = new Swiper(".review-slider", {
 });
 
 
-function goToNewPageMain() {
-    // Переход на новую страницу при клике на элемент с классом box
-    window.location.href = '../index.html';
-}
-
 let cartIcon = document.querySelector('#cart-icon');
 let cart = document.querySelector('.cart');
 let closeCart = document.querySelector('#close-cart');
@@ -252,6 +247,9 @@ orderModalOpenProd.addEventListener('click', (e) => {
 
 }); 
 
+function generateOrderNumber() {
+    return 'ORD-' + Math.floor(Math.random() * 1000000);
+}
 
 document.querySelector('.btn-buy').addEventListener('click', () => {
     const orderModalList = document.querySelector('.order-modal_list');
@@ -266,6 +264,12 @@ document.querySelector('.btn-buy').addEventListener('click', () => {
     let totalQuantity = 0;
     let totalPrice = 0;
 
+    // Генерируем уникальный номер заказа
+    const orderNumber = generateOrderNumber();
+
+    // Очищаем массив продуктов перед заполнением
+    productArray = [];
+
     // Проходимся по товарам в корзине и добавляем их в модальное окно
     cartBoxes.forEach(cartBox => {
         var title = cartBox.querySelector('.cart-product-title').innerText;
@@ -279,17 +283,23 @@ document.querySelector('.btn-buy').addEventListener('click', () => {
         totalQuantity += parseInt(quantity);
         totalPrice += price * quantity;
 
-        let obj = {};
-        obj.title = title;
-        obj.price = price;
-        obj.quantity = quantity; // Добавляем количество
+        let obj = {
+            title: title,
+            price: price,
+            quantity: quantity,
+            orderNumber: orderNumber // Добавляем номер заказа
+        };
         productArray.push(obj);
     });
 
     orderModalQuantity.innerText = `${totalQuantity} шт`;
     orderModalSumm.innerText = `${totalPrice.toFixed(2)} ₽`;
 
-    
+    // Добавляем номер заказа в модальное окно
+    orderModalList.insertAdjacentHTML('beforeend', `<li class="order-modal_item"><span>Номер заказа: ${orderNumber}</span></li>`);
+
+    // Отображаем номер заказа клиенту с помощью сообщения
+    alert(`Ваш номер заказа: ${orderNumber}`);
 });
 
 
@@ -327,20 +337,28 @@ document.querySelector('.order').addEventListener('submit', (e) => {
     e.preventDefault();
     let self = e.currentTarget;
     let formData = new FormData();
-    let name = self.querySelector('[name="Имя"] ').value;
+    let name = self.querySelector('[name="Имя"]').value;
     let tel = self.querySelector('[name="Телефон"]').value;
     let mail = self.querySelector('[name="Email"]').value;
+
+    // Используем orderNumber из productArray или генерируем новый, если массив пуст
+    const orderNumber = productArray.length > 0 ? productArray[0].orderNumber : generateOrderNumber();
+
+    // Включаем номер заказа в массив товаров
+    productArray.forEach(product => product.orderNumber = orderNumber);
+
     formData.append('Товары', JSON.stringify(productArray));
     formData.append('Имя', name);
     formData.append('Телефон', tel);
     formData.append('Email', mail);
+    formData.append('Номер заказа', orderNumber); // Добавляем номер заказа в formData
 
     let xhr = new XMLHttpRequest();
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
-            if (xhr.stats === 200) {
-                console.log('Отправлено')
+            if (xhr.status === 200) {
+                console.log('Отправлено');
             }
         }
     }
@@ -349,4 +367,4 @@ document.querySelector('.order').addEventListener('submit', (e) => {
     xhr.send(formData);
 
     self.reset();
-})
+});
